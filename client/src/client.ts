@@ -374,12 +374,15 @@ export interface _WorkspaceMiddleware {
 
 export type WorkspaceMiddleware = _WorkspaceMiddleware & ConfigurationWorkspaceMiddleware & WorkspaceFolderWorkspaceMiddleware;
 
+export interface MetadataTextDocument extends TextDocument {
+	metadata?: {}
+}
 /**
  * The Middleware lets extensions intercept the request and notications send and received
  * from the server
  */
 export interface _Middleware {
-	didOpen?: NextSignature<TextDocument, void>;
+	didOpen?: NextSignature<MetadataTextDocument, void>;
 	didChange?: NextSignature<TextDocumentChangeEvent, void>;
 	willSave?: NextSignature<TextDocumentWillSaveEvent, void>;
 	willSaveWaitUntil?: NextSignature<TextDocumentWillSaveEvent, Thenable<VTextEdit[]>>;
@@ -710,7 +713,7 @@ abstract class DocumentNotifiactions<P, E> implements DynamicFeature<TextDocumen
 	}
 }
 
-class DidOpenTextDocumentFeature extends DocumentNotifiactions<DidOpenTextDocumentParams, TextDocument> {
+class DidOpenTextDocumentFeature extends DocumentNotifiactions<DidOpenTextDocumentParams, MetadataTextDocument> {
 	constructor(client: BaseLanguageClient, private _syncedDocuments: Map<string, TextDocument>) {
 		super(
 			client, Workspace.onDidOpenTextDocument, DidOpenTextDocumentNotification.type,
@@ -748,7 +751,7 @@ class DidOpenTextDocumentFeature extends DocumentNotifiactions<DidOpenTextDocume
 			}
 			if (Languages.match(documentSelector, textDocument)) {
 				let middleware = this._client.clientOptions.middleware!;
-				let didOpen = (textDocument: TextDocument) => {
+				let didOpen = (textDocument: MetadataTextDocument) => {
 					this._client.sendNotification(this._type, this._createParams(textDocument));
 				};
 				if (middleware.didOpen) {

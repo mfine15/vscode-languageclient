@@ -11,6 +11,7 @@ import ProtocolCompletionItem from './protocolCompletionItem';
 import ProtocolCodeLens from './protocolCodeLens';
 import ProtocolDocumentLink from './protocolDocumentLink';
 import { MarkdownString } from 'vscode';
+import { MetadataTextDocument } from './client';
 
 export interface Converter {
 
@@ -18,7 +19,7 @@ export interface Converter {
 
 	asTextDocumentIdentifier(textDocument: code.TextDocument): proto.TextDocumentIdentifier;
 
-	asOpenTextDocumentParams(textDocument: code.TextDocument): proto.DidOpenTextDocumentParams;
+	asOpenTextDocumentParams(textDocument: MetadataTextDocument): proto.DidOpenTextDocumentParams;
 
 	asChangeTextDocumentParams(textDocument: code.TextDocument): proto.DidChangeTextDocumentParams;
 	asChangeTextDocumentParams(event: code.TextDocumentChangeEvent): proto.DidChangeTextDocumentParams;
@@ -99,14 +100,15 @@ export function createConverter(uriConverter?: URIConverter): Converter {
 		};
 	}
 
-	function asOpenTextDocumentParams(textDocument: code.TextDocument): proto.DidOpenTextDocumentParams {
+	function asOpenTextDocumentParams(textDocument: MetadataTextDocument): proto.DidOpenTextDocumentParams {
 		return {
 			textDocument: {
 				uri: _uriConverter(textDocument.uri),
 				languageId: textDocument.languageId,
 				version: textDocument.version,
-				text: textDocument.getText()
-			}
+				text: textDocument.getText(),
+			},
+			metadata: textDocument.metadata
 		};
 	}
 
@@ -200,7 +202,7 @@ export function createConverter(uriConverter?: URIConverter): Converter {
 	}
 
 	function asTriggerKind(triggerKind: code.CompletionTriggerKind): proto.CompletionTriggerKind {
-		switch(triggerKind) {
+		switch (triggerKind) {
 			case code.CompletionTriggerKind.TriggerCharacter:
 				return proto.CompletionTriggerKind.TriggerCharacter;
 			case code.CompletionTriggerKind.TriggerForIncompleteCompletions:
