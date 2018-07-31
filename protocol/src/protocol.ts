@@ -15,7 +15,7 @@ import {
 	CompletionItem, CompletionList, Hover, SignatureHelp,
 	Definition, ReferenceContext, DocumentHighlight, DocumentSymbolParams,
 	SymbolInformation, CodeLens, CodeActionContext, FormattingOptions, DocumentLink, MarkupKind,
-	SymbolKind, CompletionItemKind, CodeAction, CodeActionKind
+	SymbolKind, CompletionItemKind, CodeAction, CodeActionKind, DocumentSymbol
 } from 'vscode-languageserver-types';
 
 import { ImplementationRequest, ImplementationClientCapabilities, ImplementationServerCapabilities } from './protocol.implementation';
@@ -27,8 +27,11 @@ import {
 import { ConfigurationRequest, ConfigurationParams, ConfigurationItem, ConfigurationClientCapabilities } from './protocol.configuration';
 import {
 	DocumentColorRequest, ColorPresentationRequest, ColorProviderOptions, DocumentColorParams, ColorPresentationParams,
-	Color, ColorInformation, ColorPresentation, ColorServerCapabilities, ColorClientCapabilities,
+	ColorServerCapabilities, ColorClientCapabilities,
 } from './protocol.colorProvider';
+import {
+	FoldingRangeClientCapabilities, FoldingRangeProviderOptions, FoldingRangeRequest, FoldingRangeRequestParam, FoldingRangeServerCapabilities
+} from './protocol.foldingRange';
 
 /**
  * A document filter denotes a document by different properties like
@@ -414,7 +417,12 @@ export interface TextDocumentClientCapabilities {
 			 * the initial version of the protocol.
 			 */
 			valueSet?: SymbolKind[];
-		}
+		},
+
+		/**
+		 * The client support hierarchical document symbols.
+		 */
+		hierarchicalDocumentSymbolSupport?: boolean;
 	};
 
 	/**
@@ -550,7 +558,7 @@ export interface _ClientCapabilities {
 }
 
 export type ClientCapabilities = _ClientCapabilities & ImplementationClientCapabilities & TypeDefinitionClientCapabilities &
-	WorkspaceFoldersClientCapabilities & ConfigurationClientCapabilities & ColorClientCapabilities;
+	WorkspaceFoldersClientCapabilities & ConfigurationClientCapabilities & ColorClientCapabilities & FoldingRangeClientCapabilities;
 
 /**
  * Defines how the host (editor) should sync
@@ -803,7 +811,7 @@ export interface _ServerCapabilities {
 }
 
 export type ServerCapabilities = _ServerCapabilities & ImplementationServerCapabilities & TypeDefinitionServerCapabilities & WorkspaceFoldersServerCapabilities &
-	ColorServerCapabilities;
+	ColorServerCapabilities & FoldingRangeServerCapabilities;
 
 /**
  * The initialize request is sent from the client to the server.
@@ -1505,7 +1513,7 @@ export namespace DocumentHighlightRequest {
  * that resolves to such.
  */
 export namespace DocumentSymbolRequest {
-	export const type = new RequestType<DocumentSymbolParams, SymbolInformation[] | null, void, TextDocumentRegistrationOptions>('textDocument/documentSymbol');
+	export const type = new RequestType<DocumentSymbolParams, SymbolInformation[] | DocumentSymbol[] | null, void, TextDocumentRegistrationOptions>('textDocument/documentSymbol');
 }
 
 //---- Workspace Symbol Provider ---------------------------
@@ -1791,5 +1799,6 @@ export {
 	TypeDefinitionRequest,
 	WorkspaceFoldersRequest, DidChangeWorkspaceFoldersNotification, DidChangeWorkspaceFoldersParams, WorkspaceFolder, WorkspaceFoldersChangeEvent,
 	ConfigurationRequest, ConfigurationParams, ConfigurationItem,
-	DocumentColorRequest, ColorPresentationRequest, ColorProviderOptions, DocumentColorParams, ColorPresentationParams, Color, ColorInformation, ColorPresentation
+	DocumentColorRequest, ColorPresentationRequest, ColorProviderOptions, DocumentColorParams, ColorPresentationParams,
+	FoldingRangeClientCapabilities, FoldingRangeProviderOptions, FoldingRangeRequest, FoldingRangeRequestParam, FoldingRangeServerCapabilities
 };

@@ -151,6 +151,236 @@ export namespace Location {
 }
 
 /**
+ * Represents a color in RGBA space.
+ */
+export interface Color {
+
+	/**
+	 * The red component of this color in the range [0-1].
+	 */
+	readonly red: number;
+
+	/**
+	 * The green component of this color in the range [0-1].
+	 */
+	readonly green: number;
+
+	/**
+	 * The blue component of this color in the range [0-1].
+	 */
+	readonly blue: number;
+
+	/**
+	 * The alpha component of this color in the range [0-1].
+	 */
+	readonly alpha: number;
+}
+
+/**
+ * The Color namespace provides helper functions to work with
+ * [Color](#Color) literals.
+ */
+export namespace Color {
+	/**
+	 * Creates a new Color literal.
+	 */
+	export function create(red: number, green: number, blue: number, alpha: number): Color {
+		return {
+			red,
+			green,
+			blue,
+			alpha,
+		};
+	}
+
+	/**
+	 * Checks whether the given literal conforms to the [Color](#Color) interface.
+	 */
+	export function is(value: any): value is Color {
+		const candidate = value as Color;
+		return Is.number(candidate.red)
+			&& Is.number(candidate.green)
+			&& Is.number(candidate.blue)
+			&& Is.number(candidate.alpha);
+	}
+}
+
+/**
+ * Represents a color range from a document.
+ */
+export interface ColorInformation {
+
+	/**
+	 * The range in the document where this color appers.
+	 */
+	range: Range;
+
+	/**
+	 * The actual color value for this color range.
+	 */
+	color: Color;
+}
+
+/**
+ * The ColorInformation namespace provides helper functions to work with
+ * [ColorInformation](#ColorInformation) literals.
+ */
+export namespace ColorInformation {
+	/**
+	 * Creates a new ColorInformation literal.
+	 */
+	export function create(range: Range, color: Color): ColorInformation {
+		return {
+			range,
+			color,
+		};
+	}
+
+	/**
+	 * Checks whether the given literal conforms to the [ColorInformation](#ColorInformation) interface.
+	 */
+	export function is(value: any): value is ColorInformation {
+		const candidate = value as ColorInformation;
+		return Range.is(candidate.range) && Color.is(candidate.color);
+	}
+}
+
+export interface ColorPresentation {
+	/**
+	 * The label of this color presentation. It will be shown on the color
+	 * picker header. By default this is also the text that is inserted when selecting
+	 * this color presentation.
+	 */
+	label: string;
+	/**
+	 * An [edit](#TextEdit) which is applied to a document when selecting
+	 * this presentation for the color.  When `falsy` the [label](#ColorPresentation.label)
+	 * is used.
+	 */
+	textEdit?: TextEdit;
+	/**
+	 * An optional array of additional [text edits](#TextEdit) that are applied when
+	 * selecting this color presentation. Edits must not overlap with the main [edit](#ColorPresentation.textEdit) nor with themselves.
+	 */
+	additionalTextEdits?: TextEdit[];
+}
+
+/**
+ * The Color namespace provides helper functions to work with
+ * [ColorPresentation](#ColorPresentation) literals.
+ */
+export namespace ColorPresentation {
+	/**
+	 * Creates a new ColorInformation literal.
+	 */
+	export function create(label: string, textEdit?: TextEdit, additionalTextEdits?: TextEdit[]): ColorPresentation {
+		return {
+			label,
+			textEdit,
+			additionalTextEdits,
+		};
+	}
+
+	/**
+	 * Checks whether the given literal conforms to the [ColorInformation](#ColorInformation) interface.
+	 */
+	export function is(value: any): value is ColorPresentation {
+		const candidate = value as ColorPresentation;
+		return Is.string(candidate.label)
+			&& (Is.undefined(candidate.textEdit) || TextEdit.is(candidate))
+			&& (Is.undefined(candidate.additionalTextEdits) || Is.typedArray<DiagnosticRelatedInformation>(candidate.additionalTextEdits, TextEdit.is));
+	}
+}
+
+/**
+ * Enum of known range kinds
+ */
+export enum FoldingRangeKind {
+	/**
+	 * Folding range for a comment
+	 */
+	Comment = 'comment',
+	/**
+	 * Folding range for a imports or includes
+	 */
+	Imports = 'imports',
+	/**
+	 * Folding range for a region (e.g. `#region`)
+	 */
+	Region = 'region'
+}
+
+/**
+ * Represents a folding range.
+ */
+export interface FoldingRange {
+
+	/**
+	 * The zero-based line number from where the folded range starts.
+	 */
+	startLine: number;
+
+	/**
+	 * The zero-based character offset from where the folded range starts. If not defined, defaults to the length of the start line.
+	 */
+	startCharacter?: number;
+
+	/**
+	 * The zero-based line number where the folded range ends.
+	 */
+	endLine: number;
+
+	/**
+	 * The zero-based character offset before the folded range ends. If not defined, defaults to the length of the end line.
+	 */
+	endCharacter?: number;
+
+	/**
+	 * Describes the kind of the folding range such as `comment' or 'region'. The kind
+	 * is used to categorize folding ranges and used by commands like 'Fold all comments'. See
+	 * [FoldingRangeKind](#FoldingRangeKind) for an enumeration of standardized kinds.
+	 */
+	kind?: string;
+}
+
+/**
+ * The folding range namespace provides helper functions to work with
+ * [FoldingRange](#FoldingRange) literals.
+ */
+export namespace FoldingRange {
+	/**
+	 * Creates a new FoldingRange literal.
+	 */
+	export function create(startLine: number, endLine: number, startCharacter?: number, endCharacter?: number, kind?: string): FoldingRange {
+		const result: FoldingRange = {
+			startLine,
+			endLine
+		};
+		if (Is.defined(startCharacter)) {
+			result.startCharacter = startCharacter;
+		}
+		if (Is.defined(endCharacter)) {
+			result.endCharacter = endCharacter;
+		}
+		if (Is.defined(kind)) {
+			result.kind = kind;
+		}
+		return result;
+	}
+
+	/**
+	 * Checks whether the given literal conforms to the [FoldingRange](#FoldingRange) interface.
+	 */
+	export function is(value: any): value is FoldingRange {
+		const candidate = value as FoldingRange;
+		return Is.number(candidate.startLine) && Is.number(candidate.startLine)
+			&& (Is.undefined(candidate.startCharacter) || Is.number(candidate.startCharacter))
+			&& (Is.undefined(candidate.endCharacter) || Is.number(candidate.endCharacter))
+			&& (Is.undefined(candidate.kind) || Is.string(candidate.kind))
+	}
+}
+
+/**
  * Represents a related message and source code location for a diagnostic. This should be
  * used to point to code locations that cause or related to a diagnostics, e.g when duplicating
  * a symbol in a scope.
@@ -387,6 +617,13 @@ export namespace TextEdit {
 	 */
 	export function del(range: Range): TextEdit {
 		return { range, newText: '' };
+	}
+
+	export function is(value: any): value is TextEdit {
+		const candidate = value as TextEdit;
+		return Is.objectLiteral(candidate)
+			&& Is.string(candidate.newText)
+			&& Range.is(candidate.range);
 	}
 }
 
@@ -1103,8 +1340,8 @@ export namespace Hover {
 			MarkedString.is(candidate.contents) ||
 			Is.typedArray(candidate.contents, MarkedString.is)
 		) && (
-			value.range === void 0 || Range.is(value.range)
-		);
+				value.range === void 0 || Range.is(value.range)
+			);
 	}
 }
 
@@ -1380,6 +1617,91 @@ export namespace SymbolInformation {
 			result.containerName = containerName;
 		}
 		return result;
+	}
+}
+
+/**
+ * Represents programming constructs like variables, classes, interfaces etc.
+ * that appear in a document. Document symbols can be hierarchical and they
+ * have two ranges: one that encloses its definition and one that points to
+ * its most interesting range, e.g. the range of an identifier.
+ */
+export class DocumentSymbol {
+
+	/**
+	 * The name of this symbol.
+	 */
+	name: string;
+
+	/**
+	 * More detail for this symbol, e.g the signature of a function. If not provided
+	 * the name is used.
+	 */
+	detail?: string;
+
+	/**
+	 * The kind of this symbol.
+	 */
+	kind: SymbolKind;
+
+	/**
+	 * Indicates if this symbol is deprecated.
+	 */
+	deprecated?: boolean;
+
+	/**
+	 * The range enclosing this symbol not including leading/trailing whitespace but everything else
+	 * like comments. This information is typically used to determine if the the clients cursor is
+	 * inside the symbol to reveal in the symbol in the UI.
+	 */
+	range: Range;
+
+	/**
+	 * The range that should be selected and revealed when this symbol is being picked, e.g the name of a function.
+	 * Must be contained by the the `range`.
+	 */
+	selectionRange: Range;
+
+	/**
+	 * Children of this symbol, e.g. properties of a class.
+	 */
+	children?: DocumentSymbol[];
+}
+
+export namespace DocumentSymbol {
+	/**
+	 * Creates a new symbol information literal.
+	 *
+	 * @param name The name of the symbol.
+	 * @param detail The detail of the symbol.
+	 * @param kind The kind of the symbol.
+	 * @param range The range of the symbol.
+	 * @param selectionRange The selectionRange of the symbol.
+	 * @param children Children of the symbol.
+	 */
+	export function create(name: string, detail: string | undefined, kind: SymbolKind, range: Range, selectionRange: Range, children?: DocumentSymbol[]): DocumentSymbol {
+		let result: DocumentSymbol = {
+			name,
+			detail,
+			kind,
+			range,
+			selectionRange
+		};
+		if (children !== void 0) {
+			result.children = children;
+		}
+		return result;
+	}
+	/**
+	 * Checks whether the given literal conforms to the [DocumentSymbol](#DocumentSymbol) interface.
+	 */
+	export function is(value: any): value is DocumentSymbol {
+		let candidate: DocumentSymbol = value;
+		return candidate &&
+			Is.string(candidate.name) && Is.string(candidate.detail) && Is.number(candidate.kind) &&
+			Range.is(candidate.range) && Range.is(candidate.selectionRange) &&
+			(candidate.deprecated === void 0 || Is.boolean(candidate.deprecated)) &&
+			(candidate.children === void 0 || Array.isArray(candidate.children));
 	}
 }
 

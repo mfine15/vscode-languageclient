@@ -86,6 +86,12 @@ export interface Converter {
 	asSymbolInformations(values: undefined | null, uri?: code.Uri): undefined;
 	asSymbolInformations(values: ls.SymbolInformation[] | undefined | null, uri?: code.Uri): code.SymbolInformation[] | undefined;
 
+	asDocumentSymbol(value: ls.DocumentSymbol): code.DocumentSymbol;
+
+	asDocumentSymbols(value: undefined | null): undefined;
+	asDocumentSymbols(value: ls.DocumentSymbol[]): code.DocumentSymbol[];
+	asDocumentSymbols(value: ls.DocumentSymbol[] | undefined | null): code.DocumentSymbol[] | undefined;
+
 	asCommand(item: ls.Command): code.Command;
 
 	asCommands(items: ls.Command[]): code.Command[];
@@ -113,6 +119,29 @@ export interface Converter {
 	asDocumentLinks(items: ls.DocumentLink[]): code.DocumentLink[];
 	asDocumentLinks(items: undefined | null): undefined;
 	asDocumentLinks(items: ls.DocumentLink[] | undefined | null): code.DocumentLink[] | undefined;
+
+	asColor(color: ls.Color): code.Color;
+
+	asColorInformation(ci: ls.ColorInformation): code.ColorInformation;
+
+	asColorInformations(colorPresentations: ls.ColorInformation[]): code.ColorInformation[];
+	asColorInformations(colorPresentations: undefined | null): undefined;
+	asColorInformations(colorInformation: ls.ColorInformation[] | undefined | null): code.ColorInformation[];
+
+	asColorPresentation(cp: ls.ColorPresentation): code.ColorPresentation;
+
+	asColorPresentations(colorPresentations: ls.ColorPresentation[]): code.ColorPresentation[];
+	asColorPresentations(colorPresentations: undefined | null): undefined;
+	asColorPresentations(colorPresentations: ls.ColorPresentation[] | undefined | null): undefined;
+
+	asFoldingRangeKind(kind: string | undefined): code.FoldingRangeKind | undefined;
+
+	asFoldingRange(r: ls.FoldingRange): code.FoldingRange;
+
+	asFoldingRanges(foldingRanges: ls.FoldingRange[]): code.FoldingRange[];
+	asFoldingRanges(foldingRanges: undefined | null): undefined;
+	asFoldingRanges(foldingRanges: ls.FoldingRange[] | undefined | null): code.FoldingRange[] | undefined;
+	asFoldingRanges(foldingRanges: ls.FoldingRange[] | undefined | null): code.FoldingRange[] | undefined;
 }
 
 export interface URIConverter {
@@ -485,6 +514,34 @@ export function createConverter(uriConverter?: URIConverter): Converter {
 		return result;
 	}
 
+	function asDocumentSymbols(values: undefined | null): undefined;
+	function asDocumentSymbols(values: ls.DocumentSymbol[]): code.DocumentSymbol[];
+	function asDocumentSymbols(values: ls.DocumentSymbol[] | undefined | null): code.DocumentSymbol[] | undefined {
+		if (values === void 0 || values === null) {
+			return undefined;
+		}
+		return values.map(asDocumentSymbol);
+	}
+
+	function asDocumentSymbol(value: ls.DocumentSymbol): code.DocumentSymbol {
+		let result = new code.DocumentSymbol(
+			value.name,
+			value.detail !== void 0 ? value.detail : value.name,
+			asSymbolKind(value.kind),
+			asRange(value.range),
+			asRange(value.selectionRange)
+		);
+		if (value.children !== void 0 && value.children.length > 0) {
+			let children: code.DocumentSymbol[] = [];
+			for (let child of value.children) {
+				children.push(asDocumentSymbol(child));
+			}
+			result.children = children;
+		}
+		return result;
+	}
+
+
 	function asCommand(item: ls.Command): code.Command {
 		let result: code.Command = { title: item.title, command: item.command };
 		if (item.arguments) { result.arguments = item.arguments; }
@@ -607,6 +664,70 @@ export function createConverter(uriConverter?: URIConverter): Converter {
 		return items.map(asDocumentLink);
 	}
 
+	function asColor(color: ls.Color): code.Color {
+		return new code.Color(color.red, color.green, color.blue, color.alpha);
+	}
+
+	function asColorInformation(ci: ls.ColorInformation): code.ColorInformation {
+		return new code.ColorInformation(asRange(ci.range), asColor(ci.color));
+	}
+
+	function asColorInformations(colorPresentations: ls.ColorInformation[]): code.ColorInformation[];
+	function asColorInformations(colorPresentations: undefined | null): undefined;
+	function asColorInformations(colorInformation: ls.ColorInformation[] | undefined | null): code.ColorInformation[] | undefined {
+		if (Array.isArray(colorInformation)) {
+			return colorInformation.map(asColorInformation);
+		}
+		return undefined;
+	}
+
+	function asColorPresentation(cp: ls.ColorPresentation): code.ColorPresentation {
+		let presentation = new code.ColorPresentation(cp.label);
+		presentation.additionalTextEdits = asTextEdits(cp.additionalTextEdits);
+		if (cp.textEdit) {
+			presentation.textEdit = asTextEdit(cp.textEdit);
+		}
+		return presentation;
+	}
+
+	function asColorPresentations(colorPresentations: ls.ColorPresentation[]): code.ColorPresentation[];
+	function asColorPresentations(colorPresentations: undefined | null): undefined;
+	function asColorPresentations(colorPresentations: ls.ColorPresentation[] | undefined | null): code.ColorPresentation[] | undefined {
+		if (Array.isArray(colorPresentations)) {
+			return colorPresentations.map(asColorPresentation);
+		}
+		return undefined;
+	}
+
+
+	function asFoldingRangeKind(kind: string | undefined): code.FoldingRangeKind | undefined {
+		if (kind) {
+			switch (kind) {
+				case ls.FoldingRangeKind.Comment:
+					return code.FoldingRangeKind.Comment;
+				case ls.FoldingRangeKind.Imports:
+					return code.FoldingRangeKind.Imports;
+				case ls.FoldingRangeKind.Region:
+					return code.FoldingRangeKind.Region;
+			}
+		}
+		return void 0;
+	}
+
+	function asFoldingRange(r: ls.FoldingRange): code.FoldingRange {
+		return new code.FoldingRange(r.startLine, r.endLine, asFoldingRangeKind(r.kind));
+	}
+
+	function asFoldingRanges(foldingRanges: ls.FoldingRange[]): code.FoldingRange[];
+	function asFoldingRanges(foldingRanges: undefined | null): undefined;
+	function asFoldingRanges(foldingRanges: ls.FoldingRange[] | undefined | null): code.FoldingRange[] | undefined;
+	function asFoldingRanges(foldingRanges: ls.FoldingRange[] | undefined | null): code.FoldingRange[] | undefined {
+		if (Array.isArray(foldingRanges)) {
+			return foldingRanges.map(asFoldingRange);
+		}
+		return void 0;
+	}
+
 	return {
 		asUri,
 		asDiagnostics,
@@ -632,6 +753,8 @@ export function createConverter(uriConverter?: URIConverter): Converter {
 		asDocumentHighlightKind,
 		asSymbolInformations,
 		asSymbolInformation,
+		asDocumentSymbols,
+		asDocumentSymbol,
 		asCommand,
 		asCommands,
 		asCodeAction,
@@ -639,6 +762,14 @@ export function createConverter(uriConverter?: URIConverter): Converter {
 		asCodeLenses,
 		asWorkspaceEdit,
 		asDocumentLink,
-		asDocumentLinks
+		asDocumentLinks,
+		asFoldingRangeKind,
+		asFoldingRange,
+		asFoldingRanges,
+		asColor,
+		asColorInformation,
+		asColorInformations,
+		asColorPresentation,
+		asColorPresentations
 	}
 }

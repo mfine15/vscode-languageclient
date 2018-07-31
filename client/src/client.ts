@@ -12,7 +12,7 @@ import {
 	CompletionItem as VCompletionItem, CompletionList as VCompletionList, SignatureHelp as VSignatureHelp, Definition as VDefinition, DocumentHighlight as VDocumentHighlight,
 	SymbolInformation as VSymbolInformation, CodeActionContext as VCodeActionContext, Command as VCommand, CodeLens as VCodeLens,
 	FormattingOptions as VFormattingOptions, TextEdit as VTextEdit, WorkspaceEdit as VWorkspaceEdit, MessageItem,
-	Hover as VHover, CodeAction as VCodeAction,
+	Hover as VHover, CodeAction as VCodeAction, DocumentSymbol as VDocumentSymbol,
 	DocumentLink as VDocumentLink, TextDocumentWillSaveEvent,
 	WorkspaceFolder as VWorkspaceFolder, CompletionContext as VCompletionContext, ConfigurationChangeEvent
 } from 'vscode';
@@ -53,7 +53,7 @@ import {
 	DocumentLinkRequest, DocumentLinkResolveRequest, DocumentLinkRegistrationOptions,
 	ExecuteCommandRequest, ExecuteCommandParams, ExecuteCommandRegistrationOptions,
 	ApplyWorkspaceEditRequest, ApplyWorkspaceEditParams, ApplyWorkspaceEditResponse,
-	MarkupKind, SymbolKind, CompletionItemKind, Command, CodeActionKind
+	MarkupKind, SymbolKind, CompletionItemKind, Command, CodeActionKind, DocumentSymbol, SymbolInformation
 } from 'vscode-languageserver-protocol';
 
 import { ColorProviderMiddleware } from './colorProvider';
@@ -61,6 +61,7 @@ import { ImplementationMiddleware } from './implementation'
 import { TypeDefinitionMiddleware } from './typeDefinition';
 import { ConfigurationWorkspaceMiddleware } from './configuration';
 import { WorkspaceFolderWorkspaceMiddleware } from './workspaceFolders';
+import { FoldingRangeProviderMiddleware } from './foldingRange';
 
 import * as c2p from './codeConverter';
 import * as p2c from './protocolConverter';
@@ -317,7 +318,7 @@ export interface ProvideDocumentHighlightsSignature {
 }
 
 export interface ProvideDocumentSymbolsSignature {
-	(document: TextDocument, token: CancellationToken): ProviderResult<VSymbolInformation[]>;
+	(document: TextDocument, token: CancellationToken): ProviderResult<VSymbolInformation[] | VDocumentSymbol[]>;
 }
 
 export interface ProvideWorkspaceSymbolsSignature {
@@ -397,7 +398,7 @@ export interface _Middleware {
 	provideDefinition?: (this: void, document: TextDocument, position: VPosition, token: CancellationToken, next: ProvideDefinitionSignature) => ProviderResult<VDefinition>;
 	provideReferences?: (this: void, document: TextDocument, position: VPosition, options: { includeDeclaration: boolean; }, token: CancellationToken, next: ProvideReferencesSignature) => ProviderResult<VLocation[]>;
 	provideDocumentHighlights?: (this: void, document: TextDocument, position: VPosition, token: CancellationToken, next: ProvideDocumentHighlightsSignature) => ProviderResult<VDocumentHighlight[]>;
-	provideDocumentSymbols?: (this: void, document: TextDocument, token: CancellationToken, next: ProvideDocumentSymbolsSignature) => ProviderResult<VSymbolInformation[]>;
+	provideDocumentSymbols?: (this: void, document: TextDocument, token: CancellationToken, next: ProvideDocumentSymbolsSignature) => ProviderResult<VSymbolInformation[] | VDocumentSymbol[]>;
 	provideWorkspaceSymbols?: (this: void, query: string, token: CancellationToken, next: ProvideWorkspaceSymbolsSignature) => ProviderResult<VSymbolInformation[]>;
 	provideCodeActions?: (this: void, document: TextDocument, range: VRange, context: VCodeActionContext, token: CancellationToken, next: ProvideCodeActionsSignature) => ProviderResult<(VCommand | VCodeAction)[]>;
 	provideCodeLenses?: (this: void, document: TextDocument, token: CancellationToken, next: ProvideCodeLensesSignature) => ProviderResult<VCodeLens[]>;
@@ -411,7 +412,7 @@ export interface _Middleware {
 	workspace?: WorkspaceMiddleware;
 }
 
-export type Middleware = _Middleware & TypeDefinitionMiddleware & ImplementationMiddleware & ColorProviderMiddleware;
+export type Middleware = _Middleware & TypeDefinitionMiddleware & ImplementationMiddleware & ColorProviderMiddleware & FoldingRangeProviderMiddleware;
 
 export interface LanguageClientOptions {
 	documentSelector?: DocumentSelector | string[];
@@ -1573,6 +1574,7 @@ class DocumentSymbolFeature extends TextDocumentFeature<TextDocumentRegistration
 		symbolCapabilities.symbolKind = {
 			valueSet: SupporedSymbolKinds
 		}
+		symbolCapabilities.hierarchicalDocumentSymbolSupport = true;
 	}
 
 	public initialize(capabilities: ServerCapabilities, documentSelector: DocumentSelector): void {
@@ -1589,7 +1591,21 @@ class DocumentSymbolFeature extends TextDocumentFeature<TextDocumentRegistration
 		let client = this._client;
 		let provideDocumentSymbols: ProvideDocumentSymbolsSignature = (document, token) => {
 			return client.sendRequest(DocumentSymbolRequest.type, client.code2ProtocolConverter.asDocumentSymbolParams(document), token).then(
-				client.protocol2CodeConverter.asSymbolInformations,
+				(data) => {
+					if (data === null) {
+						return undefined;
+					}
+					if (data.length === 0) {
+						return [];
+					} else {
+						let element = data[0];
+						if (DocumentSymbol.is(element)) {
+							return client.protocol2CodeConverter.asDocumentSymbols(data as DocumentSymbol[]);
+						} else {
+							return client.protocol2CodeConverter.asSymbolInformations(data as SymbolInformation[]);
+						}
+					}
+				},
 				(error) => {
 					client.logFailedRequest(DocumentSymbolRequest.type, error);
 					return Promise.resolve([]);
@@ -1598,7 +1614,7 @@ class DocumentSymbolFeature extends TextDocumentFeature<TextDocumentRegistration
 		};
 		let middleware = client.clientOptions.middleware!;
 		return Languages.registerDocumentSymbolProvider(options.documentSelector!, {
-			provideDocumentSymbols: (document: TextDocument, token: CancellationToken): ProviderResult<VSymbolInformation[]> => {
+			provideDocumentSymbols: (document: TextDocument, token: CancellationToken): ProviderResult<VSymbolInformation[] | VDocumentSymbol[]> => {
 				return middleware.provideDocumentSymbols
 					? middleware.provideDocumentSymbols(document, token, provideDocumentSymbols)
 					: provideDocumentSymbols(document, token);
