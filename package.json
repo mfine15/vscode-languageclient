@@ -1,9 +1,12 @@
 {
-	"name": "vscode-lsp",
-	"description": "VSCode Language Server Protocol Implementation",
-	"version": "1.0.0",
+	"name": "vscode-languageclient",
+	"description": "VSCode Language client implementation",
+	"version": "4.4.0",
 	"author": "Microsoft Corporation",
 	"license": "MIT",
+	"engines": {
+		"vscode": "^1.25"
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Microsoft/vscode-languageserver-node.git"
@@ -11,29 +14,22 @@
 	"bugs": {
 		"url": "https://github.com/Microsoft/vscode-languageserver-node/issues"
 	},
+	"main": "./lib/main.js",
+	"typings": "./lib/main",
 	"devDependencies": {
-		"typescript": "2.9.1",
-		"mocha": "^5.2.0",
-		"@types/node": "^6.0.88",
-		"@types/mocha": "^2.2.42",
-		"rimraf": "^2.6.2",
-		"shelljs": "^0.8.1",
-		"shx": "^0.2.2"
+		"shx": "^0.3.1",
+		"vscode": "^1.1.18"
+	},
+	"dependencies": {
+		"vscode-languageserver-protocol": "^3.10.0"
 	},
 	"scripts": {
-		"postinstall": "cd types && npm install && cd ../jsonrpc && npm install && cd ../protocol && npm install && cd ../server && npm install && cd ../client && npm install && cd ..",
-		"test": "cd types && npm test && cd ../jsonrpc && npm test && cd ../protocol && npm test && cd ../server && npm test && cd ../client && npm test && cd ..",
-		"symlink": "node ./build/bin/symlink.js",
-		"compile": "npm run compile:types && npm run compile:jsonrpc && npm run compile:protocol && npm run compile:server && npm run compile:client",
-		"compile:types": "tsc -p ./types/tsconfig.json",
-		"compile:jsonrpc": "tsc -p ./jsonrpc/tsconfig.json",
-		"compile:protocol": "tsc -p ./protocol/tsconfig.json",
-		"compile:server": "tsc -p ./server/tsconfig.json",
-		"compile:client": "tsc -p ./client/tsconfig.json",
-		"watch:types": "tsc -w -p ./types/tsconfig.json",
-		"watch:jsonrpc": "tsc -w -p ./jsonrpc/tsconfig.json",
-		"watch:protocol": "tsc -w -p ./protocol/tsconfig.json",
-		"watch:server": "tsc -w -p ./server/tsconfig.json",
-		"watch:client": "tsc -w -p ./client/tsconfig.json"
+		"prepare": "npm run update-vscode",
+		"prepublishOnly": "npm run compile && npm test",
+		"postpublish": "node ../build/npm/post-publish.js",
+		"compile": "node ../build/bin/tsc -p ./tsconfig.json && shx cp src/utils/terminateProcess.sh lib/utils/terminateProcess.sh",
+		"watch": "node ../build/bin/tsc -w -p ./tsconfig.json",
+		"update-vscode": "node ./node_modules/vscode/bin/install",
+		"test": "cd lib && node ../node_modules/vscode/bin/test"
 	}
 }
