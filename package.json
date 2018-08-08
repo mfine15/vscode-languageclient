@@ -30,6 +30,7 @@
 		"compile": "node ../build/bin/tsc -p ./tsconfig.json && shx cp src/utils/terminateProcess.sh lib/utils/terminateProcess.sh",
 		"watch": "node ../build/bin/tsc -w -p ./tsconfig.json",
 		"update-vscode": "node ./node_modules/vscode/bin/install",
-		"test": "cd lib && node ../node_modules/vscode/bin/test"
+		"test": "cd lib && node ../node_modules/vscode/bin/test",
+		"postinstall": "npm run compile"
 	}
 }
